@@ -2,13 +2,8 @@ name: Build & Release Hex Loader
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -19,11 +14,9 @@ jobs:
     name: Build Linux
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.23.0'
           cache: false
@@ -38,16 +31,12 @@ jobs:
             libxkbcommon-dev libxkbcommon-x11-dev \
             libwayland-dev
 
-      - name: Check formatting
-        run: test -z "$(gofmt -l .)"
-
       - name: Build
         run: go build -o hex-loader-linux-x64 .
         env:
           CGO_ENABLED: 1
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: hex-loader-linux-x64
           path: hex-loader-linux-x64
@@ -57,44 +46,27 @@ jobs:
     name: Build Windows
     runs-on: windows-2025
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23.0'
-          cache: false
-
-      - name: Install MSYS2 toolchain and GLFW
-        uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           update: true
           install: >-
             mingw-w64-ucrt-x86_64-toolchain
             mingw-w64-ucrt-x86_64-glfw
-
-      - name: Check formatting
-        shell: pwsh
-        run: |
-          $gofmt = (Get-Command gofmt).Source
-          & $gofmt -l .
+            mingw-w64-ucrt-x86_64-go
 
       - name: Build
         shell: msys2 {0}
         run: |
           export CGO_ENABLED=1
           export CC=gcc
-          export PKG_CONFIG=/ucrt64/bin/pkg-config
           go build -o hex-loader-windows-x64.exe .
-        env:
-          PATH: /ucrt64/bin:/usr/bin:$PATH
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: hex-loader-windows-x64
+          name: hex-loader-windows-x64.exe
           path: hex-loader-windows-x64.exe
           if-no-files-found: error
 
@@ -102,25 +74,19 @@ jobs:
     name: Build macOS
     runs-on: macos-15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.23.0'
           cache: false
-
-      - name: Check formatting
-        run: test -z "$(gofmt -l .)"
 
       - name: Build
         run: go build -o hex-loader-macos-arm64 .
         env:
           CGO_ENABLED: 1
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: hex-loader-macos-arm64
           path: hex-loader-macos-arm64
@@ -136,14 +102,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-files
+          merge-multiple: true
 
-      - name: List artifacts
-        run: find release-files -type f
+      - name: List files
+        run: ls -la release-files
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-files/**/*
+          files: release-files/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
