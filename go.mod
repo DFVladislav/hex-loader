@@ -1,6 +1,6 @@
 module github.com/DFVladislav/hex-loader
 
-go 1.27.2
+go 1.23.0
 
 require fyne.io/fyne/v2 v2.8.2
 
