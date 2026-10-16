@@ -11,11 +11,12 @@ permissions:
 
 jobs:
   build:
+    name: Build ${{ matrix.asset_name }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             artifact_name: hex-loader
             asset_name: hex-loader-linux-amd64
           - os: windows-latest
@@ -34,8 +35,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
-          cache: true
+          go-version: '1.22'
+          cache: false
 
       - name: Install Linux deps
         if: runner.os == 'Linux'
@@ -44,7 +45,43 @@ jobs:
           sudo apt-get install -y \
             gcc pkg-config \
             libgl1-mesa-dev libglu1-mesa-dev \
-            xorg-dev libxkbcommon-dev \
-            libx11-dev libxcursor-dev libxrandr-dev \
-            libxinerama-dev libxi-dev libxxf86vm-dev \
-            libwayland-dev libxkbcommon-x11-dev
+            xorg-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Build
+        run: go build -o ${{ matrix.artifact_name }} .
+        env:
+          CGO_ENABLED: 1
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
