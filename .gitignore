@@ -1,0 +1,15 @@
+# binaries
+hex-loader
+hex-loader.exe
+hex-loader-*
+dist/
+
+# go
+*.test
+*.out
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
